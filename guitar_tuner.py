@@ -42,7 +42,7 @@ class AudioStream(QThread):
 
 
     def process_stream(self, in_data, frame_count, time_info, flag) :
-        raw = np.fromstring(in_data, dtype=np.float64)
+        raw = np.fromstring(in_data, dtype=np.int16)
         parent = self.parent()
 
         # If we have not reached right number of chunks, add another
@@ -321,7 +321,7 @@ class GraphWidget(QWidget):
         self.t_plot.setPen("k")
         self.f_plot.setPen("k")
         self.t_ax.setXRange(tmin, tmax)
-        self.t_ax.setYRange(-5000.0, 5000.0)
+        # self.t_ax.setYRange(-5000.0, 5000.0)
         # self.f_ax.setYRange(0, 10000.0)
         self.tdata = np.arange(tmin, tmax, dt)
 
