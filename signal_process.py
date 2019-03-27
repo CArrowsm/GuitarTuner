@@ -12,7 +12,7 @@ def callback(in_data, frame_count, time_info, flag):
     return None, pa.paContinue
 '''
 
-def open_stream(self, callback) :
+def open_stream(callback) :
     fmax = 500.0                   # Highest frequency we are looking for in Hz
     n = 20                         # Number of chunks per second
     RATE = int((5*fmax))           # Audio sampling rate
@@ -25,7 +25,7 @@ def open_stream(self, callback) :
                     input=True,
                     start=False,
                     frames_per_buffer=CHUNK,
-                    stream_callback=self.process_stream
+                    stream_callback=callback
                     )
     return p, stream, n, CHUNK, RATE
 

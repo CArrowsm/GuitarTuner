@@ -15,6 +15,7 @@ import pandas as pd
 pg.setConfigOption('background', (249,249,249))
 pg.setConfigOption('foreground', 'k')
 import signal_process as sp
+import pyaudio as pa
 ################################################################
 
 
@@ -27,7 +28,7 @@ class AudioStream(QThread):
 
         # Initialize the audio connection
         self.data_arr = np.array([])
-        connection, stream, self.n, self.chunk, self.samp_rate = sp.open_stream(self, self.run)
+        self.connection, self.stream, self.n, self.chunk, self.samp_rate = self.open_stream(self.process_stream)
 
         self.ref_rate = 5                                      # GUI refresh rate (s^-1)
         self.count, self.limit = 0, int(self.n / self.ref_rate)# Number of chunks per GUI refresh
@@ -35,29 +36,32 @@ class AudioStream(QThread):
         self.N = self.limit * self.chunk
         parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
-        # self.timer = QTimer()
-        # self.timer.timeout.connect(lambda: self.run(parent))
-        # self.timer.start(0.1)
-
         # Begin stream
-        sp.start_stream(stream)
+        self.stream.start_stream()
+        print('stream started')
 
 
     def process_stream(self, in_data, frame_count, time_info, flag) :
-        parent = self.parent
+        raw = np.fromstring(in_data, dtype=np.float64)
+        parent = self.parent()
+
         # If we have not reached right number of chunks, add another
         if self.count < (self.limit - 1) :
-            self.data_arr = np.concatenate((self.data_arr, in_data), axis=None)
+            print('adding another chunk')
+            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
 
         # If we've reached last chunk, add last and process them
         elif self.count == (self.limit - 1) :
-            self.data_arr = np.concatenate((self.data_arr, in_data), axis=None)
+            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
+            print('processing data')
 
             # Process Data and send to GUI:
             freqs, fft = sp.spectrum(self.data_arr, self.samp_rate, self.N)
             if parent.currentWidget() == parent.graph_tab :
+                print('Graphing')
                 parent.graph_tab.update_canvas(self.data_arr, freqs, fft)
             elif parent.tuner_tab.listen_note :
+                print("Tuning")
                 peak = sp.peak_detect(freqs, fft)
                 parent.tuner_tab.update_display(peak)
 
@@ -68,6 +72,31 @@ class AudioStream(QThread):
             self.count = -1
 
         self.count = self.count + 1
+        return None, pa.paContinue
+
+    # Create PyAudio connection to mic and open stream (but dont start streaming)
+    def open_stream(self, callback) :
+        fmax = 500.0                   # Highest frequency we are looking for in Hz
+        n = 20                         # Number of chunks per second
+        RATE = int((5*fmax))           # Audio sampling rate
+        print(1/n)
+        CHUNK = int(RATE / n)          # Number of samples per update
+        p = pa.PyAudio()
+        stream = p.open(format=pa.paInt16,
+                        channels=1,
+                        rate=int(RATE),
+                        input=True,
+                        start=False,
+                        frames_per_buffer=CHUNK,
+                        stream_callback=callback
+                        )
+        return p, stream, n, CHUNK, RATE
+
+    # Start streaming
+    def start_stream(self, stream):
+        stream.start_stream()
+
+
 
 
 class App(QStackedWidget):
