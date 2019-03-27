@@ -20,14 +20,7 @@ def stream_speed() :
                     stream_callback=callback
                     )
     stream.start_stream()
-
-    time.sleep(30)
-
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-
-
+    return p, stream
 
 
 def callback(in_data, frame_count, time_info, flag):
@@ -37,6 +30,10 @@ def callback(in_data, frame_count, time_info, flag):
     print(time.time() - t1)
     return None, pa.paContinue
 
+def stop_stream(pyaudio_connection, stream) :
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
 
 if __name__=="__main__" :
     stream_speed()

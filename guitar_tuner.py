@@ -23,10 +23,11 @@ class AudioStream(QThread):
     """Sets up the mic connection and passes data to widgets."""
     def __init__(self, parent):
         super(QThread, self).__init__(parent)
+        global stream, connection
 
         # Initialize the audio connection
         self.data_arr = np.array([])
-        self.connection, self.stream, self.n, self.chunk, self.samp_rate = sp.mic_connect()
+        connection, stream, self.n, self.chunk, self.samp_rate = sp.open_stream(self, self.run)
 
         self.ref_rate = 5                                      # GUI refresh rate (s^-1)
         self.count, self.limit = 0, int(self.n / self.ref_rate)# Number of chunks per GUI refresh
@@ -34,24 +35,23 @@ class AudioStream(QThread):
         self.N = self.limit * self.chunk
         parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
-        self.timer = QTimer()
-        self.timer.timeout.connect(lambda: self.run(parent))
-        self.timer.start(0.1)
+        # self.timer = QTimer()
+        # self.timer.timeout.connect(lambda: self.run(parent))
+        # self.timer.start(0.1)
 
-    def run(self, parent) :
-        # Get most recent chunk
-        # t1 = time.time()
-        # timer = QTimer()
+        # Begin stream
+        sp.start_stream(stream)
 
-        raw = sp.stream_audio(self.connection, self.stream, self.chunk)
 
-        # print(time.time()-t1)
-
+    def process_stream(self, in_data, frame_count, time_info, flag) :
+        parent = self.parent
+        # If we have not reached right number of chunks, add another
         if self.count < (self.limit - 1) :
-            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
-            # print(self.count)
+            self.data_arr = np.concatenate((self.data_arr, in_data), axis=None)
+
+        # If we've reached last chunk, add last and process them
         elif self.count == (self.limit - 1) :
-            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
+            self.data_arr = np.concatenate((self.data_arr, in_data), axis=None)
 
             # Process Data and send to GUI:
             freqs, fft = sp.spectrum(self.data_arr, self.samp_rate, self.N)

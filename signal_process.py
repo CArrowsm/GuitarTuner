@@ -1,14 +1,36 @@
-import pyaudio
+import pyaudio as pa
 import numpy as np
 import time
 from scipy.signal import find_peaks
 
+'''
 def callback(in_data, frame_count, time_info, flag):
     global mic_data
     t1 = time.time()
     mic_data = np.fromstring(in_data, dtype=np.float64)
     print(time.time() - t1)
     return None, pa.paContinue
+'''
+
+def open_stream(self, callback) :
+    fmax = 500.0                   # Highest frequency we are looking for in Hz
+    n = 20                         # Number of chunks per second
+    RATE = int((5*fmax))           # Audio sampling rate
+    print(1/n)
+    CHUNK = int(RATE / n)          # Number of samples per update
+    p = pa.PyAudio()
+    stream = p.open(format=pa.paInt16,
+                    channels=1,
+                    rate=int(RATE),
+                    input=True,
+                    start=False,
+                    frames_per_buffer=CHUNK,
+                    stream_callback=self.process_stream
+                    )
+    return p, stream, n, CHUNK, RATE
+
+def start_stream(stream):
+        stream.start_stream()
 
 # Function to set up mic connection and return
 def mic_connect():
