@@ -58,6 +58,17 @@ QPushButton#bar {
     height: 4px;
 }
 
+QLabel#tune_icon {
+    color: black;
+    background-color: grey;
+    font-size:24px;
+    font-family: "Optima", serif;
+    font-weight: normal;
+    image: url(icons/down_arrow.png);
+    position: relative;
+    width: 100px;
+}
+
 QLabel#tuning {
     color: black;
     font-size:24px;

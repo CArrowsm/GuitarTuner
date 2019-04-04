@@ -3,7 +3,6 @@ import sys
 from PyQt5.QtWidgets import (QLabel, QMainWindow, QApplication, QPushButton,
                              QWidget, QAction, QHBoxLayout, QComboBox,
                              QStackedWidget, QVBoxLayout, QGridLayout)
-
 from PyQt5.QtGui import QIcon, QPainter, QPixmap, QPainterPath
 from PyQt5.QtCore import ( pyqtSlot, pyqtSignal, QTimer,QThread, QObject,
                            QPointF, QPropertyAnimation, pyqtProperty )
@@ -24,44 +23,50 @@ class AudioStream(QThread):
     """Sets up the mic connection and passes data to widgets."""
     def __init__(self, parent):
         super(QThread, self).__init__(parent)
-        global stream, connection
 
         # Initialize the audio connection
         self.data_arr = np.array([])
-        self.connection, self.stream, self.n, self.chunk, self.samp_rate = self.open_stream(self.process_stream)
+        (self.connection, self.stream,
+        self.n, self.chunk, self.samp_rate) = sp.open_stream(self.process_stream)
+        print("Connection: ", self.connection)
+        print("Stream: ", self.stream)
+        print("Chunks per second: ", self.n)
+        print("Samples per Chunk: ", self.chunk)
+        print("Sample Rate: ", self.samp_rate)
 
-        self.ref_rate = 5                                      # GUI refresh rate (s^-1)
+        ### Edit this Value ###
+        self.ref_rate = 3                                      # GUI refresh rate (s^-1)
+        ### --------------- ###
+
+        # Don't touch this
         self.count, self.limit = 0, int(self.n / self.ref_rate)# Number of chunks per GUI refresh
-        # print(self.limit)
-        self.N = self.limit * self.chunk
+        # self.N = self.limit * self.chunk
         parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
         # Begin stream
         self.stream.start_stream()
-        print('stream started')
+        print('Stream Started')
 
 
     def process_stream(self, in_data, frame_count, time_info, flag) :
+        # t1 = time.time()
         raw = np.fromstring(in_data, dtype=np.int16)
         parent = self.parent()
 
         # If we have not reached right number of chunks, add another
         if self.count < (self.limit - 1) :
-            print('adding another chunk')
             self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
 
         # If we've reached last chunk, add last and process them
         elif self.count == (self.limit - 1) :
             self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
-            print('processing data')
 
             # Process Data and send to GUI:
-            freqs, fft = sp.spectrum(self.data_arr, self.samp_rate, self.N)
+            freqs, fft = sp.spectrum(self.data_arr, self.samp_rate)
             if parent.currentWidget() == parent.graph_tab :
-                print('Graphing')
                 parent.graph_tab.update_canvas(self.data_arr, freqs, fft)
+
             elif parent.tuner_tab.listen_note :
-                print("Tuning")
                 peak = sp.peak_detect(freqs, fft)
                 parent.tuner_tab.update_display(peak)
 
@@ -72,30 +77,13 @@ class AudioStream(QThread):
             self.count = -1
 
         self.count = self.count + 1
+        # print(time.time() - t1)
         return None, pa.paContinue
 
-    # Create PyAudio connection to mic and open stream (but dont start streaming)
-    def open_stream(self, callback) :
-        fmax = 500.0                   # Highest frequency we are looking for in Hz
-        n = 20                         # Number of chunks per second
-        RATE = int((5*fmax))           # Audio sampling rate
-        print(1/n)
-        CHUNK = int(RATE / n)          # Number of samples per update
-        p = pa.PyAudio()
-        stream = p.open(format=pa.paInt16,
-                        channels=1,
-                        rate=int(RATE),
-                        input=True,
-                        start=False,
-                        frames_per_buffer=CHUNK,
-                        stream_callback=callback
-                        )
-        return p, stream, n, CHUNK, RATE
 
     # Start streaming
     def start_stream(self, stream):
         stream.start_stream()
-
 
 
 
@@ -204,10 +192,17 @@ class TunerWidget(QWidget):
 
     def create_graphic(self) :
         # Make moveable icon
-        # self.icon = AnimationIcon(self)
-        # self.ani_box = QHBoxLayout().addWidget(self.icon)
-        # self.vlayout.addLayout(self.icon)
-        # self.icon.pos = QPointF(30, 30)
+        self.tune_icon = QLabel("Hi")
+        self.tune_icon.setObjectName('tune_icon')
+        # ani_box = QHBoxLayout(self)
+        # ani_box.addStretch(0.2)
+        # ani_box.addWidget(self.tune_icon)
+        # ani_box.addStretch(0.2)
+        self.vlayout.addLayout(self.tune_icon)
+        self.tune_icon.setGeometry(200, 200, 500, 400)
+
+
+
 
         # Make grid bar (which is stationary)
         bar = QHBoxLayout(self)
@@ -321,12 +316,12 @@ class GraphWidget(QWidget):
         self.t_plot.setPen("k")
         self.f_plot.setPen("k")
         self.t_ax.setXRange(tmin, tmax)
-        # self.t_ax.setYRange(-5000.0, 5000.0)
-        # self.f_ax.setYRange(0, 10000.0)
+        self.t_ax.setYRange(-5000.0, 5000.0)
+        self.f_ax.setYRange(0, 100.0)
         self.tdata = np.arange(tmin, tmax, dt)
 
     def update_canvas(self, data, freqs, fft):
-        self.t_plot.setData(y=data, x=self.tdata)
+        self.t_plot.setData(y=data[:len(self.tdata)], x=self.tdata)
         self.f_plot.setData(x=freqs, y=fft)
         app.processEvents()   # Forces total re-draw
         ### End of Audio Plots ###

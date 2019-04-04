@@ -3,22 +3,21 @@ import numpy as np
 import time
 from scipy.signal import find_peaks
 
-'''
-def callback(in_data, frame_count, time_info, flag):
-    global mic_data
-    t1 = time.time()
-    mic_data = np.fromstring(in_data, dtype=np.float64)
-    print(time.time() - t1)
-    return None, pa.paContinue
-'''
+############
+global fmin, fmax
+fmin = 50.0                    # Lowest frequency we are looking for in Hz
+fmax = 500.0                   # Highest frequency we are looking for in Hz
+############
 
+# Create PyAudio connection to mic and open stream (but dont start streaming)
 def open_stream(callback) :
     fmax = 500.0                   # Highest frequency we are looking for in Hz
     n = 20                         # Number of chunks per second
-    RATE = int((5*fmax))           # Audio sampling rate
-    print(1/n)
-    CHUNK = int(RATE / n)          # Number of samples per update
+    # RATE = int((10*fmax))          # Audio sampling rate
+    RATE = 44100.0
+    CHUNK = int(RATE / n)          # Number of samples per chunk
     p = pa.PyAudio()
+    print(p.get_default_input_device_info())
     stream = p.open(format=pa.paInt16,
                     channels=1,
                     rate=int(RATE),
@@ -34,8 +33,6 @@ def start_stream(stream):
 
 # Function to set up mic connection and return
 def mic_connect():
-    global fmax
-    fmax = 500.0                   # Highest frequency we are looking for in Hz
     n = 20                         # Number of chunks per second
     RATE = int((5*fmax))           # Audio sampling rate
     CHUNK = int(RATE / n) # Number of samples per update
@@ -62,15 +59,26 @@ def mic_close(audio_connection, stream):
 
 
 # Function takes array of times and array of y values and outputs f, W
-def spectrum(y, sampling_rate, N):
-    Y = np.abs(np.fft.fft(y))/np.sqrt(N)
-    f = np.fft.fftfreq(N,1/sampling_rate)
+def spectrum(y, sampling_rate):
+    N, dt = len(y), 1.0/sampling_rate
 
-    return f[ : int(N/2)], Y[ : int(N/2)]
+    # Apply Hanning window
+    n = np.arange(0, N, 1)
+    w = 1 - np.cos(2*np.pi*n/N)
+    y = y * w
+
+    Y = np.absolute(np.fft.fft( y/max(y) ))
+    f = np.fft.fftfreq(N, dt)
+
+    # Restrict f range
+    f, Y = f[(0 < f) & (f < fmax)], Y[(0 < f) & (f < fmax)]
+    return f, Y
 
 
 # Return location of peak with lowest x-value
 def peak_detect(x, y) :
+    x, y = x[fmin < x], y[fmin < x]
+
     cutoff = max(y) * (1/3)
     peaks, _ = find_peaks(y, height=cutoff, distance=None)
 
