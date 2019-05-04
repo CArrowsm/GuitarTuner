@@ -12,10 +12,6 @@ QPushButton#header {
     font-weight: 200;
     border: 0;
     border-bottom: 2px solid black;
-    /* image: url(guitar_icon.png);
-    width: 30px;
-    height: 30px;
-    position: relative; */
 }
 
 QPushButton:hover#header {

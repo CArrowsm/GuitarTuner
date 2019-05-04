@@ -35,7 +35,7 @@ class AudioStream(QThread):
         print("Sample Rate: ", self.samp_rate)
 
         ### Edit this Value ###
-        self.ref_rate = 3                                      # GUI refresh rate (s^-1)
+        self.ref_rate = 2                                      # GUI refresh rate (s^-1)
         ### --------------- ###
 
         # Don't touch this
@@ -49,7 +49,9 @@ class AudioStream(QThread):
 
 
     def process_stream(self, in_data, frame_count, time_info, flag) :
-        # t1 = time.time()
+        if flag:
+            print("Playback Error: ", flag)
+
         raw = np.fromstring(in_data, dtype=np.int16)
         parent = self.parent()
 
@@ -77,7 +79,7 @@ class AudioStream(QThread):
             self.count = -1
 
         self.count = self.count + 1
-        # print(time.time() - t1)
+
         return None, pa.paContinue
 
 
@@ -194,15 +196,19 @@ class TunerWidget(QWidget):
         # Make moveable icon
         self.tune_icon = QLabel("Hi")
         self.tune_icon.setObjectName('tune_icon')
-        # ani_box = QHBoxLayout(self)
-        # ani_box.addStretch(0.2)
-        # ani_box.addWidget(self.tune_icon)
-        # ani_box.addStretch(0.2)
-        self.vlayout.addLayout(self.tune_icon)
-        self.tune_icon.setGeometry(200, 200, 500, 400)
-
-
-
+        ani_box = QHBoxLayout(self)
+        ani_box.addStretch(1)
+        ani_box.addWidget(self.tune_icon)
+        ani_box.addStretch(1)
+        # self.tune_icon.pos = pyqtProperty(QPointF, fset=self.update_display)
+        self.vlayout.addLayout(ani_box)
+        # self.tune_icon.pos = QPointF(0, 0)
+        # self.tune_icon.path = QPainterPath()
+        # self.tl = QtCore.QTimeLine(1000)
+        # self.tl.setFrameRange(0, 100)
+        # self.a = QPropertyAnimation()
+        # self.a.setItem(self.tune_icon)
+        # self.a.setTimeLine(self.tl)
 
         # Make grid bar (which is stationary)
         bar = QHBoxLayout(self)
@@ -264,6 +270,24 @@ class TunerWidget(QWidget):
                   + str(self.listen_freq)[0:5]+") Hz\n"     \
                   + "Current Note: " + str(peak)[0:5] + " Hz"
         self.text.setText(string)
+
+        # Animation
+        # self.a.setPosAt(0, QtCore.QPointF(0, -10))
+        # self.a.setRotationAt(1, 360)
+        # self.tl.start()
+
+        # self.tune_icon.path.moveTo(50, 200)
+        # self.anim = QPropertyAnimation(self.tune_icon, b'pos')
+        # self.anim.setDuration(100)
+        # self.anim.setStartValue(QPointF(0, 30))
+        #
+        # vals = [p/100 for p in range(0, 101)]
+        #
+        # for i in vals:
+        #     self.anim.setKeyValueAt(i, self.tune_icon.path.pointAtPercent(i))
+        # self.anim.setEndValue(QPointF(0, 3))
+        # self.anim.start()
+        print('animating')
 
 
 class GraphWidget(QWidget):
