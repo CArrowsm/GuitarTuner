@@ -35,12 +35,14 @@ class AudioStream(QThread):
         print("Sample Rate: ", self.samp_rate)
 
         ### Edit this Value ###
-        self.ref_rate = 2                                      # GUI refresh rate (s^-1)
+        self.ref_rate = 5                                      # GUI refresh rate (s^-1)
         ### --------------- ###
 
         # Don't touch this
         self.count, self.limit = 0, int(self.n / self.ref_rate)# Number of chunks per GUI refresh
-        # self.N = self.limit * self.chunk
+        print("Number of Chunks per GUI update: ", self.limit)
+        print("dt = ", 1/self.samp_rate, "seconds")
+        print("df = ", 1/(self.limit * self.chunk), "Hz")
         parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
         # Begin stream
@@ -79,7 +81,6 @@ class AudioStream(QThread):
             self.count = -1
 
         self.count = self.count + 1
-
         return None, pa.paContinue
 
 
@@ -287,7 +288,6 @@ class TunerWidget(QWidget):
         #     self.anim.setKeyValueAt(i, self.tune_icon.path.pointAtPercent(i))
         # self.anim.setEndValue(QPointF(0, 3))
         # self.anim.start()
-        print('animating')
 
 
 class GraphWidget(QWidget):
