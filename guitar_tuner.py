@@ -35,52 +35,59 @@ class AudioStream(QThread):
         print("Sample Rate: ", self.samp_rate)
 
         ### Edit this Value ###
-        self.ref_rate = 5                                      # GUI refresh rate (s^-1)
+        self.ref_rate = 8                                      # GUI refresh rate (s^-1)
         ### --------------- ###
 
         # Don't touch this
         self.count, self.limit = 0, int(self.n / self.ref_rate)# Number of chunks per GUI refresh
         print("Number of Chunks per GUI update: ", self.limit)
+        print("GUI refresh interval: ", 1/self.ref_rate, "seconds")
+        print("Time samples per GUI update: ", self.limit * self.chunk)
+        print("Frequency samples per GUI update: ", self.limit * self.chunk/2)
         print("dt = ", 1/self.samp_rate, "seconds")
-        print("df = ", 1/(self.limit * self.chunk), "Hz")
+        print("df = ", (self.samp_rate)/(self.limit * self.chunk), "Hz")
         parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
         # Begin stream
+        self.time0 = time.time()
         self.stream.start_stream()
         print('Stream Started')
 
 
     def process_stream(self, in_data, frame_count, time_info, flag) :
-        if flag:
-            print("Playback Error: ", flag)
+        # if flag:
+        #     print("Playback Error: ", flag)
+        #
+        # raw = np.fromstring(in_data, dtype=np.int16)
+        # parent = self.parent()
+        #
+        # # If we have not reached right number of chunks, add another
+        # if self.count < (self.limit - 1) :
+        #     self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
+        #
+        # # If we've reached last chunk, add last and process them
+        # elif self.count == (self.limit - 1) :
+        #     self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
+        #
+        #     # Process Data and send to GUI:
+        #     freqs, fft = sp.spectrum(self.data_arr, self.samp_rate)
+        #     if parent.currentWidget() == parent.graph_tab :
+        #         parent.graph_tab.update_canvas(self.data_arr, freqs, fft)
+        #
+        #     elif parent.tuner_tab.listen_note :
+        #         peak = sp.peak_detect(freqs, fft)
+        #         parent.tuner_tab.update_display(peak)
+        #
+        #     # Reset Array
+        #     self.data_arr = np.array([])
+        #
+        #     # Reset counter
+        #     self.count = -1
+        #
+        # self.count = self.count + 1
 
-        raw = np.fromstring(in_data, dtype=np.int16)
-        parent = self.parent()
-
-        # If we have not reached right number of chunks, add another
-        if self.count < (self.limit - 1) :
-            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
-
-        # If we've reached last chunk, add last and process them
-        elif self.count == (self.limit - 1) :
-            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
-
-            # Process Data and send to GUI:
-            freqs, fft = sp.spectrum(self.data_arr, self.samp_rate)
-            if parent.currentWidget() == parent.graph_tab :
-                parent.graph_tab.update_canvas(self.data_arr, freqs, fft)
-
-            elif parent.tuner_tab.listen_note :
-                peak = sp.peak_detect(freqs, fft)
-                parent.tuner_tab.update_display(peak)
-
-            # Reset Array
-            self.data_arr = np.array([])
-
-            # Reset counter
-            self.count = -1
-
-        self.count = self.count + 1
+        print(time.time() - self.time0)
+        self.time0 = time.time()
         return None, pa.paContinue
 
 
