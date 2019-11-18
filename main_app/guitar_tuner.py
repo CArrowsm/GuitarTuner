@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import (QLabel, QMainWindow, QApplication, QPushButton,
                              QStackedWidget, QVBoxLayout, QGridLayout)
 from PyQt5.QtGui import QIcon, QPainter, QPixmap, QPainterPath
 from PyQt5.QtCore import ( pyqtSlot, pyqtSignal, QTimer,QThread, QObject,
-                           QPointF, QPropertyAnimation, pyqtProperty )
+                           QPointF, QPropertyAnimation, pyqtProperty, QRunnable,
+                           QThreadPool )
 import time
 import numpy as np
 from pyqtgraph.Qt import QtCore
@@ -19,10 +20,10 @@ import pyaudio as pa
 
 
 # Audio stream
-class AudioStream(QThread):
+class AudioStream(QRunnable):
     """Sets up the mic connection and passes data to widgets."""
-    def __init__(self, parent):
-        super(QThread, self).__init__(parent)
+    def __init__(self):
+        super(AudioStream, self).__init__()
 
         # Initialize the audio connection
         self.data_arr = np.array([])
@@ -46,7 +47,7 @@ class AudioStream(QThread):
         print("Frequency samples per GUI update: ", self.limit * self.chunk/2)
         print("dt = ", 1/self.samp_rate, "seconds")
         print("df = ", (self.samp_rate)/(self.limit * self.chunk), "Hz")
-        parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
+        # parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
         # Begin stream
         self.time0 = time.time()
@@ -88,7 +89,7 @@ class AudioStream(QThread):
 
         print(time.time() - self.time0)
         self.time0 = time.time()
-        return None, pa.paContinue
+        return in_data, pa.paContinue
 
 
     # Start streaming
@@ -101,12 +102,19 @@ class App(QStackedWidget):
     """main application class."""
     def __init__(self):
         super(App, self).__init__()
+
+        self.s = AudioStream()
+
+        self.threadpool = QThreadPool()
+        self.threadpool.start(self.s)
+
+
         self.initUI()
 
         self.show()
 
         # Initialize audio stream class
-        self.s = AudioStream(self)
+        # self.s = AudioStream(self)
 
         try:
             sys.exit(app.exec_())
