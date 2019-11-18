@@ -20,10 +20,12 @@ import pyaudio as pa
 
 
 # Audio stream
-class AudioStream(QRunnable):
+class AudioStream(object):
     """Sets up the mic connection and passes data to widgets."""
-    def __init__(self):
+    def __init__(self, parent):
         super(AudioStream, self).__init__()
+
+        self.parent = parent
 
         # Initialize the audio connection
         self.data_arr = np.array([])
@@ -36,7 +38,7 @@ class AudioStream(QRunnable):
         print("Sample Rate: ", self.samp_rate)
 
         ### Edit this Value ###
-        self.ref_rate = 8                                      # GUI refresh rate (s^-1)
+        self.ref_rate = 5                                      # GUI refresh rate (s^-1)
         ### --------------- ###
 
         # Don't touch this
@@ -47,7 +49,7 @@ class AudioStream(QRunnable):
         print("Frequency samples per GUI update: ", self.limit * self.chunk/2)
         print("dt = ", 1/self.samp_rate, "seconds")
         print("df = ", (self.samp_rate)/(self.limit * self.chunk), "Hz")
-        # parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
+        self.parent.graph_tab.create_canvas([self.limit, self.chunk, self.n])
 
         # Begin stream
         self.time0 = time.time()
@@ -56,40 +58,42 @@ class AudioStream(QRunnable):
 
 
     def process_stream(self, in_data, frame_count, time_info, flag) :
-        # if flag:
-        #     print("Playback Error: ", flag)
-        #
-        # raw = np.fromstring(in_data, dtype=np.int16)
-        # parent = self.parent()
-        #
-        # # If we have not reached right number of chunks, add another
-        # if self.count < (self.limit - 1) :
-        #     self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
-        #
-        # # If we've reached last chunk, add last and process them
-        # elif self.count == (self.limit - 1) :
-        #     self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
-        #
-        #     # Process Data and send to GUI:
-        #     freqs, fft = sp.spectrum(self.data_arr, self.samp_rate)
-        #     if parent.currentWidget() == parent.graph_tab :
-        #         parent.graph_tab.update_canvas(self.data_arr, freqs, fft)
-        #
-        #     elif parent.tuner_tab.listen_note :
-        #         peak = sp.peak_detect(freqs, fft)
-        #         parent.tuner_tab.update_display(peak)
-        #
-        #     # Reset Array
-        #     self.data_arr = np.array([])
-        #
-        #     # Reset counter
-        #     self.count = -1
-        #
-        # self.count = self.count + 1
+        if flag:
+            print("Playback Error: ", flag)
 
-        print(time.time() - self.time0)
-        self.time0 = time.time()
-        return in_data, pa.paContinue
+        raw = np.frombuffer(in_data, dtype=np.int32)
+        parent = self.parent
+
+        # If we have not reached right number of chunks, add another
+        if self.count < (self.limit - 1) :
+            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
+
+        # If we've reached last chunk, add last and process them
+        elif self.count == (self.limit - 1) :
+            self.data_arr = np.concatenate((self.data_arr, raw), axis=None)
+
+            # Process Data and send to GUI:
+            freqs, fft = sp.spectrum(self.data_arr, self.samp_rate)
+            # If using graph tab, graph the data and its FFT
+            if parent.currentWidget() == parent.graph_tab :
+                parent.graph_tab.update_canvas(self.data_arr, freqs, fft)
+
+            # if using the tuning tab, update the display accordingly
+            elif parent.tuner_tab.listen_note :
+                peak = sp.peak_detect(freqs, fft)
+                parent.tuner_tab.update_display(peak)
+
+            # Reset Array
+            self.data_arr = np.array([])
+
+            # Reset counter
+            self.count = -1
+
+        self.count = self.count + 1
+
+        # print(time.time() - self.time0)
+        # self.time0 = time.time()
+        return (in_data, pa.paContinue)
 
 
     # Start streaming
@@ -103,18 +107,17 @@ class App(QStackedWidget):
     def __init__(self):
         super(App, self).__init__()
 
-        self.s = AudioStream()
-
-        self.threadpool = QThreadPool()
-        self.threadpool.start(self.s)
-
-
         self.initUI()
+
+        # self.s = AudioStream(self)
+
+        # self.threadpool = QThreadPool()
+        # self.threadpool.start(self.s)
 
         self.show()
 
         # Initialize audio stream class
-        # self.s = AudioStream(self)
+        self.s = AudioStream(self)
 
         try:
             sys.exit(app.exec_())

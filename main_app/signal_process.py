@@ -12,16 +12,17 @@ fmax = 1500.0                   # Highest frequency we are looking for in Hz
 # Create PyAudio connection to mic and open stream (but dont start streaming)
 def open_stream(callback) :
     fmax = 500.0                   # Highest frequency we are looking for in Hz
-    n = 8                          # Number of chunks per second (must be integer multiple of GUI refresh rate)
+    n = 10                         # Number of chunks per second (must be integer multiple of GUI refresh rate)
     # RATE = int((10*fmax))        # Audio sampling rate
     RATE = 44100.0
     CHUNK = int(RATE / n)          # Number of samples per chunk
     p = pa.PyAudio()
     print(p.get_default_input_device_info())
-    stream = p.open(format=pa.paInt16,
+    stream = p.open(format=pa.paInt32,
                     channels=1,
                     rate=int(RATE),
                     input=True,
+                    output=True,
                     start=False,
                     frames_per_buffer=CHUNK,
                     stream_callback=callback
